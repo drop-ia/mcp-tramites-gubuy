@@ -60,14 +60,24 @@ La imagen pesa unos 8 MB, corre con un usuario sin privilegios y guarda la cach�
 
 ### Despliegue en Dokploy (tramites.dropia.uy)
 
-En el servidor de dropia (`144.217.88.113`, donde ya apunta el DNS de `tramites.dropia.uy`):
+Corre en **https://tramites.dropia.uy/mcp**. Está en Dokploy Cloud (`app.dokploy.com`), proyecto `MCP Trámites`, environment `production`, servidor `OVH - dropia - I` (`144.217.88.113`). Se desplegó por primera vez el 10 de noviembre de 2026.
 
-1. Crear una aplicación desde el repo de GitHub, con build type **Dockerfile**.
-2. **Domains:** `tramites.dropia.uy`, puerto `8080`, HTTPS con Let's Encrypt.
-3. **Advanced → Volumes:** montar un volumen en `/data`.
-4. No hacen falta variables de entorno.
+| Elemento | Valor |
+|---|---|
+| Aplicación | `mcp-tramites` (`applicationId` `fRS84sTm4BsbXiQ_adogd`, nombre interno `mcp-tramites-a1h5dc`) |
+| Origen | GitHub `drop-ia/mcp-tramites-gubuy`, rama `main`, por la app `Dokploy-DropIA`. Build type **Dockerfile** |
+| Dominio | `tramites.dropia.uy` → puerto `8080`, HTTPS con Let's Encrypt. El DNS es un registro A a `144.217.88.113` |
+| Volumen | `mcp-tramites-cache` montado en `/data` (caché de los catálogos) |
+| Variables | Ninguna |
 
-El conector queda en `https://tramites.dropia.uy/mcp`.
+**Auto-deploy:** cada push a `main` construye y despliega.
+
+Para redesplegar a mano (la API de Dokploy pide un `User-Agent`; sin él, Cloudflare responde 403):
+
+```sh
+curl -X POST -H "x-api-key: $DOKPLOY_TOKEN" -H "User-Agent: curl/8.0" -H "Content-Type: application/json" \
+  -d '{"applicationId":"fRS84sTm4BsbXiQ_adogd"}' https://app.dokploy.com/api/application.deploy
+```
 
 ## Datos y caché
 
