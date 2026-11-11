@@ -395,11 +395,18 @@ func TestSinonimos(t *testing.T) {
 	csv := cabecera + `
 "6538","Documento Nacional de Identidad - Renovación","4.1","Dirección Nacional de Identificación Civil","4","Ministerio del Interior",01/01/2024,01/01/2026,"https://www.gub.uy/tramites/documento-nacional-identidad-renovacion","Es el trámite para renovar el Documento Nacional de Identidad.","","","","","","persona",""
 "5167","Certificado migratorio para renovación de documento de identidad","5.1","Dirección Nacional de Migración","4","Ministerio del Interior",01/01/2024,01/01/2026,"https://www.gub.uy/tramites/certificado-migratorio","Necesario para renovar su cédula de identidad uruguaya.","","","","","","internet",""
+"9999","Cédula catastral","7.1","Dirección Nacional de Catastro","7","Ministerio de Economía y Finanzas",01/01/2024,01/01/2026,"https://www.gub.uy/tramites/cedula-catastral","Documento del inmueble.","","","","","","internet",""
 "6987","Reempadronamiento de vehículos provenientes de otros departamentos","6.1","Intendencia de Canelones","6","Intendencia de Canelones",01/01/2024,01/01/2026,"https://www.gub.uy/tramites/reempadronamiento","Vehículos empadronados en otro departamento.","","","1","$","4630","persona",""
 `
 	d, err := Parsear(strings.NewReader(csv))
 	if err != nil {
 		t.Fatal(err)
+	}
+	if _, total := Buscar(d, FiltrosBusqueda{Consulta: "online"}); total != 0 {
+		t.Errorf("una consulta sólo con palabras opcionales no debe traer todo: %d", total)
+	}
+	if res, _ := Buscar(d, FiltrosBusqueda{Consulta: "seguro de paro"}); len(res) != 0 {
+		t.Errorf("seguro de paro no debería encontrar fichas de este fixture: %v", res)
 	}
 	casos := []struct {
 		consulta string
@@ -407,10 +414,15 @@ func TestSinonimos(t *testing.T) {
 		total    int
 	}{
 		{"renovar cédula de identidad", "6538", 2},
+		{"cédula de identidad", "6538", 2},
 		{"renovar CI", "6538", 2},
-		{"DNI", "6538", 2},
+		{"DNI", "6538", 3},
 		{"radicación de vehículo canelones", "6987", 1},
 		{"traslado vehiculo", "6987", 1},
+		{"sacar la cédula urgente en uruguay", "6538", 3},
+		{"cédulas", "6538", 3},
+		{"cómo sacar la cédula", "6538", 3},
+		{"perdí la cédula", "6538", 3},
 	}
 	for _, c := range casos {
 		res, total := Buscar(d, FiltrosBusqueda{Consulta: c.consulta})

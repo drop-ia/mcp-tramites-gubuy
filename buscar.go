@@ -25,6 +25,23 @@ var palabrasVacias = map[string]bool{
 	"de": true, "la": true, "el": true, "los": true, "las": true, "del": true, "en": true,
 	"y": true, "o": true, "a": true, "un": true, "una": true, "por": true, "para": true,
 	"con": true, "al": true, "mi": true, "se": true, "que": true, "como": true, "tramite": true,
+	// Verbos y palabras de intención que la gente escribe pero las fichas no usan:
+	// "cómo sacar la libreta", "dónde tramitar la cédula", "cuánto cuesta el pasaporte".
+	"sacar": true, "tramitar": true, "hacer": true, "obtener": true, "conseguir": true,
+	"quiero": true, "necesito": true, "donde": true, "cuanto": true, "cuesta": true,
+	"precio": true, "me": true, "te": true, "le": true, "lo": true, "su": true, "sus": true,
+	"mis": true,
+}
+
+// opcionales desempatan si aparecen en el nombre, pero no descartan la ficha si faltan: "partida
+// de nacimiento uruguay" debe encontrar "Partida de nacimiento" y "ciudadanía uruguaya"
+// debe seguir prefiriendo la "Carta de ciudadanía (ciudadanía legal uruguaya)".
+var opcionales = map[string]bool{
+	"uruguay": true, "uruguayo": true, "uruguaya": true, "urgente": true, "online": true,
+	"internet": true, "linea": true, "web": true,
+	// Pérdida o robo: si no hay una ficha de duplicado, sirve la de renovación.
+	"perdi": true, "perdida": true, "perdido": true, "robo": true, "robaron": true,
+	"extravio": true, "hurto": true, "duplicado": true,
 }
 
 // siglas arma la sigla de un nombre con las iniciales de sus palabras significativas:
@@ -57,36 +74,110 @@ func coincideInstitucion(t *Tramite, filtroN string) bool {
 
 // sinonimos lista las formas en que el catálogo puede nombrar lo que la persona escribe.
 // Un término con entrada coincide si aparece cualquiera de sus formas; uno sin entrada,
-// sólo por sí mismo. Las fichas dicen "Documento Nacional de Identidad" y no "cédula",
-// "renovación" y no "renovar", "reempadronamiento" y no "radicación".
+// sólo por sí mismo. Cada forma se busca como prefijo de palabra, igual que los términos,
+// y la primera es la preferida cuando hay empate.
+// La lista sale de búsquedas reales en Uruguay que no encontraban la ficha porque el
+// catálogo usa otra palabra: "Documento Nacional de Identidad" y no "cédula",
+// "renovación" y no "renovar", "matrimonio" y no "casamiento".
 var sinonimos = map[string][]string{
-	"cedula":     {"cedula", "documento nacional de identidad", "documento de identidad"},
-	"ci":         {"cedula", "documento nacional de identidad", "documento de identidad"},
-	"dni":        {"cedula", "documento nacional de identidad", "documento de identidad"},
-	"renovar":    {"renovar", "renovacion"},
-	"solicitar":  {"solicitar", "solicitud"},
-	"inscribir":  {"inscribir", "inscripcion"},
-	"pagar":      {"pagar", "pago"},
+	// Documentos
+	// La cédula de identidad va primero para que gane sobre la "Cédula catastral".
+	"cedula":   {"documento nacional de identidad", "cedula de identidad", "documento de identidad", "cedula"},
+	"ci":       {"documento nacional de identidad", "cedula de identidad", "documento de identidad", "cedula"},
+	"dni":      {"documento nacional de identidad", "cedula de identidad", "documento de identidad", "cedula"},
+	"carnet":   {"carnet", "carne"},
+	"libreta":  {"libreta", "licencia", "permiso unico nacional de conducir"},
+	"licencia": {"licencia", "libreta", "permiso unico nacional de conducir"},
+	"robo":     {"robo", "hurto", "extravio"},
+	"robaron":  {"robo", "hurto", "extravio"},
+	"perdi":    {"perdida", "extravio"},
+	"perdida":  {"perdida", "extravio"},
+
+	// Verbos que el catálogo nombra con el sustantivo
+	"renovar":     {"renovar", "renovacion"},
+	"solicitar":   {"solicitar", "solicitud"},
+	"inscribir":   {"inscribir", "inscripcion"},
+	"inscribirse": {"inscribir", "inscripcion"},
+	"anotarse":    {"inscribir", "inscripcion"},
+	"pagar":       {"pagar", "pago"},
+	"empadronar":  {"empadronar", "empadronamiento"},
+	"habilitar":   {"habilitar", "habilitacion"},
+	"registrar":   {"registrar", "registro"},
+	"legalizar":   {"legalizar", "legalizacion"},
+	"apostillar":  {"apostillar", "apostilla"},
+	"exonerar":    {"exonerar", "exoneracion"},
+	"transferir":  {"transferir", "transferencia"},
+	"reclamar":    {"reclamar", "reclamo"},
+	"denunciar":   {"denunciar", "denuncia"},
+	"jubilarse":   {"jubilarse", "jubilacion"},
+	"jubilar":     {"jubilar", "jubilacion"},
+	"podar":       {"podar", "poda"},
+	"castrar":     {"castrar", "castracion"},
+	"vacunar":     {"vacunar", "vacunacion"},
+	"bonificado":  {"bonificado", "bonificacion"},
+	"divorciarse": {"divorcio"},
+	"casarse":     {"matrimonio"},
+	"casamiento":  {"casamiento", "matrimonio"},
+	"boda":        {"matrimonio"},
+
+	// Otras palabras de todos los días
 	"radicacion": {"radicacion", "reempadronamiento"},
 	"radicar":    {"radicar", "radicacion", "reempadronamiento"},
 	"traslado":   {"traslado", "reempadronamiento"},
+	"auto":       {"auto", "vehiculo"},
+	"coche":      {"vehiculo", "automotor", "auto"},
+	"telepeaje":  {"telepeaje", "peaje"},
+	"alquiler":   {"alquiler", "arrendamiento"},
+	"basura":     {"basura", "residuos", "recoleccion"},
+	"perro":      {"perro", "canin", "mascota"},
+	"perros":     {"perro", "canin", "mascota"},
+	"mascota":    {"mascota", "canin", "perro"},
+	"muerte":     {"muerte", "defuncion", "fallecimiento"},
+	"fallecido":  {"fallecido", "defuncion", "fallecimiento"},
+	"jubilado":   {"jubilado", "jubilacion", "pasivo"},
+	"jubilados":  {"jubilado", "jubilacion", "pasivo"},
 }
 
-// formas devuelve las variantes con que se busca un término.
+// frases reemplaza expresiones de varias palabras que el catálogo dice de otra manera.
+// Se aplican sobre la consulta normalizada, antes de separarla en términos.
+var frases = strings.NewReplacer(
+	" seguro de paro ", " subsidio por desempleo ",
+	" seguro de desempleo ", " subsidio por desempleo ",
+	" certificacion medica ", " subsidio por enfermedad ",
+	" licencia medica ", " subsidio por enfermedad ",
+	" licencia por maternidad ", " subsidio por maternidad ",
+	" licencia por paternidad ", " subsidio por paternidad ",
+	" buena conducta ", " antecedentes judiciales ",
+	" exoneracion de peaje ", " bonificacion de peaje ",
+	" exoneracion peaje ", " bonificacion peaje ",
+	" abrir una empresa ", " inscripcion de empresa ",
+	" abrir empresa ", " inscripcion de empresa ",
+	" crear una empresa ", " inscripcion de empresa ",
+	" crear empresa ", " inscripcion de empresa ",
+)
+
+// formas devuelve las variantes con que se busca un término. Si el término no tiene
+// sinónimos pero su singular sí ("alquileres" -> "alquiler"), usa los del singular.
 func formas(term string) []string {
-	if fs, ok := sinonimos[term]; ok {
-		return fs
+	for _, t := range []string{term, strings.TrimSuffix(term, "es"), strings.TrimSuffix(term, "s")} {
+		if fs, ok := sinonimos[t]; ok {
+			return fs
+		}
 	}
 	return []string{term}
 }
 
 // puntajeTermino da el mejor puntaje de un término entre sus formas: 10 si aparece en el
-// nombre, 4 en la institución, 2 en la descripción y 0 si no aparece.
+// nombre, 4 en la institución, 2 en la descripción y 0 si no aparece. La primera forma
+// de la lista, la preferida, suma 1 más en el nombre para desempatar.
 func puntajeTermino(t *Tramite, term string) int {
 	mejor := 0
-	for _, f := range formas(term) {
+	for i, f := range formas(term) {
 		switch {
 		case contienePalabra(t.nombreN, f):
+			if i == 0 {
+				return 11
+			}
 			return 10
 		case contienePalabra(t.institucionN, f):
 			mejor = max(mejor, 4)
@@ -98,8 +189,9 @@ func puntajeTermino(t *Tramite, term string) int {
 }
 
 func terminos(consulta string) []string {
+	consulta = strings.TrimSpace(frases.Replace(" " + normalizar(consulta) + " "))
 	var ts []string
-	for _, p := range strings.Fields(normalizar(consulta)) {
+	for _, p := range strings.Fields(consulta) {
 		if !palabrasVacias[p] {
 			ts = append(ts, p)
 		}
@@ -130,6 +222,8 @@ type resultado struct {
 // de sus sinónimos (en nombre, institución o descripción), ordenados por relevancia.
 func Buscar(d *Datos, f FiltrosBusqueda) (encontrados []*Tramite, total int) {
 	ts := terminos(f.Consulta)
+	// Si la consulta sólo tiene palabras opcionales ("uruguay"), se exigen todas.
+	todasOpcionales := !slices.ContainsFunc(ts, func(t string) bool { return !opcionales[t] })
 	inst := normalizar(f.Institucion)
 	canal := normalizar(f.Canal)
 
@@ -147,6 +241,11 @@ func Buscar(d *Datos, f FiltrosBusqueda) (encontrados []*Tramite, total int) {
 		puntaje, ok := 0, true
 		for _, term := range ts {
 			p := puntajeTermino(t, term)
+			if opcionales[term] && !todasOpcionales {
+				// Desempata sólo si está en el nombre; no debe pesar más que lo que se busca.
+				puntaje += p / 10
+				continue
+			}
 			if p == 0 {
 				ok = false
 				break
@@ -156,7 +255,7 @@ func Buscar(d *Datos, f FiltrosBusqueda) (encontrados []*Tramite, total int) {
 		if !ok {
 			continue
 		}
-		if len(ts) > 0 && strings.Contains(t.nombreN, strings.Join(ts, " ")) {
+		if len(ts) > 1 && strings.Contains(t.nombreN, strings.Join(ts, " ")) {
 			puntaje += 15 // la frase completa aparece en el nombre
 		}
 		res = append(res, resultado{t, puntaje})
