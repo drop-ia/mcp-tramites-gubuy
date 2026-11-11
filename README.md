@@ -1,6 +1,16 @@
 # mcp-tramites-gub-uy
 
-Servidor [MCP](https://modelcontextprotocol.io) en Go para consultar los trámites y servicios del Estado uruguayo.
+Servidor [MCP](https://modelcontextprotocol.io) en Go para consultar los trámites y servicios del Estado uruguayo. Proyecto no oficial de [dropia](https://dropia.uy/proyectos/tramites-uruguay/).
+
+## Usar el servidor público
+
+No hace falta instalar nada: agregá **`https://tramites.dropia.uy/mcp`** como conector MCP (HTTP, sin autenticación) en tu asistente.
+
+- **Claude (claude.ai o escritorio):** Configuración → Conectores → Agregar conector personalizado, y pegá la dirección.
+- **ChatGPT:** con el modo desarrollador activado, agregá un conector propio con esa dirección y sin autenticación.
+- **Claude Code:** `claude mcp add --transport http tramites-uy https://tramites.dropia.uy/mcp`
+
+Más información y guías de trámites armadas con estos datos: [dropia.uy/proyectos/tramites-uruguay](https://dropia.uy/proyectos/tramites-uruguay/).
 
 Fuentes:
 
@@ -92,3 +102,7 @@ curl -X POST -H "x-api-key: $DOKPLOY_TOKEN" -H "User-Agent: curl/8.0" -H "Conten
 - No todos los organismos publican en el catálogo de AGESIC. La Intendencia de Montevideo se agrega aparte; de las demás intendencias solo están las 11 que publican ahí.
 - AGESIC informa el costo como `tiene_costo` más una unidad y un valor (U.R., U.I., $), a menudo vacíos o `Sin definir`. La IM lo informa como texto libre, y solo los que empiezan con "No tiene costo" cuentan como gratuitos.
 - Los trámites de la IM no traen canales de atención: el campo de origen no coincide con lo que muestra el portal. Por eso el filtro `canal` los excluye; el detalle está en la sección "¿Cómo se hace?".
+
+## Licencia
+
+[MIT](LICENSE). Los datos son de sus fuentes: el catálogo de AGESIC se publica como dato abierto; los trámites de la Intendencia de Montevideo salen de su portal público.

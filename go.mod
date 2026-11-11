@@ -1,4 +1,4 @@
-module github.com/fabdelgado/mcp-tramites-gub-uy
+module github.com/drop-ia/mcp-tramites-gubuy
 
 go 1.27.1
 
