@@ -389,3 +389,37 @@ func TestSinRepetidos(t *testing.T) {
 		t.Errorf("sinRepetidos = %+v", got)
 	}
 }
+
+func TestSinonimos(t *testing.T) {
+	cabecera := strings.SplitN(csvPrueba, "\n", 2)[0]
+	csv := cabecera + `
+"6538","Documento Nacional de Identidad - Renovación","4.1","Dirección Nacional de Identificación Civil","4","Ministerio del Interior",01/01/2024,01/01/2026,"https://www.gub.uy/tramites/documento-nacional-identidad-renovacion","Es el trámite para renovar el Documento Nacional de Identidad.","","","","","","persona",""
+"5167","Certificado migratorio para renovación de documento de identidad","5.1","Dirección Nacional de Migración","4","Ministerio del Interior",01/01/2024,01/01/2026,"https://www.gub.uy/tramites/certificado-migratorio","Necesario para renovar su cédula de identidad uruguaya.","","","","","","internet",""
+"6987","Reempadronamiento de vehículos provenientes de otros departamentos","6.1","Intendencia de Canelones","6","Intendencia de Canelones",01/01/2024,01/01/2026,"https://www.gub.uy/tramites/reempadronamiento","Vehículos empadronados en otro departamento.","","","1","$","4630","persona",""
+`
+	d, err := Parsear(strings.NewReader(csv))
+	if err != nil {
+		t.Fatal(err)
+	}
+	casos := []struct {
+		consulta string
+		primero  string
+		total    int
+	}{
+		{"renovar cédula de identidad", "6538", 2},
+		{"renovar CI", "6538", 2},
+		{"DNI", "6538", 2},
+		{"radicación de vehículo canelones", "6987", 1},
+		{"traslado vehiculo", "6987", 1},
+	}
+	for _, c := range casos {
+		res, total := Buscar(d, FiltrosBusqueda{Consulta: c.consulta})
+		if total != c.total || len(res) == 0 || res[0].ID != c.primero {
+			var ids []string
+			for _, r := range res {
+				ids = append(ids, r.ID)
+			}
+			t.Errorf("%q: obtuve %v (total %d), esperaba primero %s y total %d", c.consulta, ids, total, c.primero, c.total)
+		}
+	}
+}

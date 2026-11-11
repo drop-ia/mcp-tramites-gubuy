@@ -55,6 +55,48 @@ func coincideInstitucion(t *Tramite, filtroN string) bool {
 	return contienePalabra(t.institucionN, filtroN)
 }
 
+// sinonimos lista las formas en que el catálogo puede nombrar lo que la persona escribe.
+// Un término con entrada coincide si aparece cualquiera de sus formas; uno sin entrada,
+// sólo por sí mismo. Las fichas dicen "Documento Nacional de Identidad" y no "cédula",
+// "renovación" y no "renovar", "reempadronamiento" y no "radicación".
+var sinonimos = map[string][]string{
+	"cedula":     {"cedula", "documento nacional de identidad", "documento de identidad"},
+	"ci":         {"cedula", "documento nacional de identidad", "documento de identidad"},
+	"dni":        {"cedula", "documento nacional de identidad", "documento de identidad"},
+	"renovar":    {"renovar", "renovacion"},
+	"solicitar":  {"solicitar", "solicitud"},
+	"inscribir":  {"inscribir", "inscripcion"},
+	"pagar":      {"pagar", "pago"},
+	"radicacion": {"radicacion", "reempadronamiento"},
+	"radicar":    {"radicar", "radicacion", "reempadronamiento"},
+	"traslado":   {"traslado", "reempadronamiento"},
+}
+
+// formas devuelve las variantes con que se busca un término.
+func formas(term string) []string {
+	if fs, ok := sinonimos[term]; ok {
+		return fs
+	}
+	return []string{term}
+}
+
+// puntajeTermino da el mejor puntaje de un término entre sus formas: 10 si aparece en el
+// nombre, 4 en la institución, 2 en la descripción y 0 si no aparece.
+func puntajeTermino(t *Tramite, term string) int {
+	mejor := 0
+	for _, f := range formas(term) {
+		switch {
+		case contienePalabra(t.nombreN, f):
+			return 10
+		case contienePalabra(t.institucionN, f):
+			mejor = max(mejor, 4)
+		case contienePalabra(t.textoN, f):
+			mejor = max(mejor, 2)
+		}
+	}
+	return mejor
+}
+
 func terminos(consulta string) []string {
 	var ts []string
 	for _, p := range strings.Fields(normalizar(consulta)) {
@@ -84,8 +126,8 @@ type resultado struct {
 	puntaje int
 }
 
-// Buscar devuelve los trámites que contienen todos los términos de la consulta
-// (en nombre, institución o descripción), ordenados por relevancia.
+// Buscar devuelve los trámites que contienen todos los términos de la consulta, o alguno
+// de sus sinónimos (en nombre, institución o descripción), ordenados por relevancia.
 func Buscar(d *Datos, f FiltrosBusqueda) (encontrados []*Tramite, total int) {
 	ts := terminos(f.Consulta)
 	inst := normalizar(f.Institucion)
@@ -104,19 +146,12 @@ func Buscar(d *Datos, f FiltrosBusqueda) (encontrados []*Tramite, total int) {
 		}
 		puntaje, ok := 0, true
 		for _, term := range ts {
-			switch {
-			case contienePalabra(t.nombreN, term):
-				puntaje += 10
-			case contienePalabra(t.institucionN, term):
-				puntaje += 4
-			case contienePalabra(t.textoN, term):
-				puntaje += 2
-			default:
+			p := puntajeTermino(t, term)
+			if p == 0 {
 				ok = false
-			}
-			if !ok {
 				break
 			}
+			puntaje += p
 		}
 		if !ok {
 			continue
