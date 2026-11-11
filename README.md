@@ -81,7 +81,7 @@ curl -X POST -H "x-api-key: $DOKPLOY_TOKEN" -H "User-Agent: curl/8.0" -H "Conten
 
 ## Datos y caché
 
-- Al arrancar, cada fuente se descarga en segundo plano y se guarda en `$(os.UserCacheDir)/mcp-tramites-gub-uy/` (en macOS: `~/Library/Caches/...`): `tramites.csv` (unos 10 MB) y `montevideo.json`. Pasadas 24 h se vuelven a descargar, sin dejar de responder con la copia anterior.
+- Al arrancar, cada fuente se descarga en segundo plano y se guarda en `$(os.UserCacheDir)/mcp-tramites-gub-uy/` (en macOS: `~/Library/Caches/...`): `tramites.csv` (unos 10 MB) y `montevideo-v2.json`. Pasadas 24 h se vuelven a descargar, sin dejar de responder con la copia anterior.
 - La IM se recorre en unas 11 páginas, y la primera descarga puede tardar más de un minuto. Una consulta espera a lo sumo 20 s; si no llega, responde sin la IM y con un aviso.
 - Si una descarga falla, se sigue usando la última copia en disco, aunque tenga más de 24 h.
 - Para usar otras URLs, definí `TRAMITES_CSV_URL` (CSV de AGESIC) o `TRAMITES_IM_URL` (base del portal de la IM).

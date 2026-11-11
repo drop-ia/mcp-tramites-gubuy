@@ -277,7 +277,8 @@ func NuevoCatalogo(log *slog.Logger) *Catalogo {
 	return &Catalogo{
 		fuentes: []*fuente{
 			fuenteAGESIC(urlCSV, filepath.Join(dirCache(), "tramites.csv"), cliente, log),
-			fuenteMontevideo(urlIM, filepath.Join(dirCache(), "montevideo.json"), cliente, log),
+			// v2: con la paginación ordenada; las cachés anteriores tienen trámites repetidos y faltantes.
+			fuenteMontevideo(urlIM, filepath.Join(dirCache(), "montevideo-v2.json"), cliente, log),
 		},
 		espera: esperaMaxima,
 	}

@@ -62,6 +62,7 @@ func fuenteMontevideo(base, rutaCache string, cliente *http.Client, log *slog.Lo
 			if err := json.Unmarshal(crudo, &ts); err != nil {
 				return nil, err
 			}
+			ts = sinRepetidos(ts)
 			if len(ts) == 0 {
 				return nil, fmt.Errorf("sin trámites de %s", nombreIM)
 			}
@@ -82,6 +83,8 @@ func descargarMontevideo(ctx context.Context, cliente *http.Client, base string)
 	q := url.Values{}
 	q.Set("filter[status]", "1")
 	q.Set("page[limit]", "50")
+	// Sin un orden estable, Drupal pagina distinto en cada pedido: repite trámites y saltea otros.
+	q.Set("sort", "drupal_internal__nid")
 	q.Set("include", "field_cmp_dep_responsable,field_cmp_categoria")
 	q.Set("fields[node--tramite]", "drupal_internal__nid,title,created,changed,path,field_tra_descripcion,"+
 		"field_tra_requisitos,field_tra_costo,field_tra_procedimiento,field_tra_aclaraciones,"+
@@ -118,10 +121,24 @@ func descargarMontevideo(ctx context.Context, cliente *http.Client, base string)
 			siguiente = baseURL.String() + sig.Path + "?" + sig.RawQuery
 		}
 	}
+	tramites = sinRepetidos(tramites)
 	if len(tramites) == 0 {
 		return nil, fmt.Errorf("la API de %s no devolvió trámites", nombreIM)
 	}
 	return tramites, nil
+}
+
+// sinRepetidos conserva la primera aparición de cada id.
+func sinRepetidos(ts []*Tramite) []*Tramite {
+	vistos := make(map[string]bool, len(ts))
+	unicos := ts[:0]
+	for _, t := range ts {
+		if !vistos[t.ID] {
+			vistos[t.ID] = true
+			unicos = append(unicos, t)
+		}
+	}
+	return unicos
 }
 
 func convertirTramiteIM(rec jsonAPIRecurso, nombres map[refRecurso]string, base *url.URL) *Tramite {

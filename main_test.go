@@ -113,7 +113,7 @@ func TestFicha(t *testing.T) {
 // Dos páginas de la API JSON:API de la IM; el enlace "next" viene con http:// como en producción.
 const imPagina1 = `{"data":[{"type":"node--tramite","id":"u1","attributes":{"drupal_internal__nid":24588,"title":"Limpieza de boca de tormenta","created":"2012-05-31T15:38:09+00:00","changed":{"value":"2026-04-29T14:13:03+00:00"},"path":{"alias":"/tramites-y-tributos/solicitud/limpieza-boca-de-tormenta"},"field_tra_descripcion":"Solicitá la limpieza de una boca de tormenta tapada.\r\n","field_tra_requisitos":{"value":"x","processed":"<p>En el <a href=\"https://formularios.montevideo.gub.uy/f\">formulario web</a> debe:</p><ul><li data-x=\"1\">Indicar la dirección.</li><li>Adjuntar foto&nbsp;opcional.</li></ul><p>&nbsp;</p>"},"field_tra_costo":{"processed":"<p>No tiene costo</p>"},"field_tra_procedimiento":{"processed":"<h3>Whatsapp</h3><p>Ver <a href=\"/atencion\">atención</a></p>"},"field_tra_aclaraciones":null},"relationships":{"field_cmp_dep_responsable":{"data":{"type":"taxonomy_term--dependencia","id":"d1"}},"field_cmp_categoria":{"data":[{"type":"taxonomy_term--categoria_tramite","id":"c1"}]}}}],
 "included":[{"type":"taxonomy_term--dependencia","id":"d1","attributes":{"name":"Servicio de Saneamiento"}},{"type":"taxonomy_term--categoria_tramite","id":"c1","attributes":{"name":"Solicitud"}}],
-"links":{"next":{"href":"http://example.invalid/jsonapi/node/tramite?filter%5Bstatus%5D=1&page%5Boffset%5D=50&page%5Blimit%5D=50"}}}`
+"links":{"next":{"href":"http://example.invalid/jsonapi/node/tramite?filter%5Bstatus%5D=1&sort=drupal_internal__nid&page%5Boffset%5D=50&page%5Blimit%5D=50"}}}`
 
 const imPagina2 = `{"data":[{"type":"node--tramite","id":"u2","attributes":{"drupal_internal__nid":30,"title":"Habilitación de piscinas","created":"2020-01-01T00:00:00+00:00","changed":{"value":"2026-01-02T00:00:00+00:00"},"path":{"alias":"/tramites-y-tributos/certificado/piscinas"},"field_tra_descripcion":"Certificado higiénico.","field_tra_requisitos":null,"field_tra_costo":{"processed":"<p>$ 1.552</p>"},"field_tra_procedimiento":null},"relationships":{"field_cmp_dep_responsable":{"data":null},"field_cmp_categoria":{"data":[]}}}],"included":[],"links":{}}`
 
@@ -138,6 +138,9 @@ func nuevoServidorPrueba(t *testing.T, demoraIM time.Duration) *servidorPrueba {
 			if sp.falloIM.Load() {
 				http.Error(w, "caído", http.StatusBadGateway)
 				return
+			}
+			if r.URL.Query().Get("sort") != "drupal_internal__nid" {
+				t.Errorf("falta un orden estable para paginar: %s", r.URL.RawQuery)
 			}
 			if r.URL.Query().Get("filter[status]") != "1" {
 				t.Errorf("falta filtrar por publicados: %s", r.URL.RawQuery)
@@ -376,5 +379,13 @@ func TestServidorHTTP(t *testing.T) {
 	}
 	if txt := r.Content[0].(*mcp.TextContent).Text; !strings.Contains(txt, "id: im-24588") || !strings.HasSuffix(txt, avisoErrores) {
 		t.Errorf("buscar_tramites por HTTP: %s", txt)
+	}
+}
+
+func TestSinRepetidos(t *testing.T) {
+	ts := []*Tramite{{ID: "im-1", Nombre: "a"}, {ID: "im-2"}, {ID: "im-1", Nombre: "b"}, {ID: "im-3"}, {ID: "im-2"}}
+	got := sinRepetidos(ts)
+	if len(got) != 3 || got[0].Nombre != "a" || got[1].ID != "im-2" || got[2].ID != "im-3" {
+		t.Errorf("sinRepetidos = %+v", got)
 	}
 }
